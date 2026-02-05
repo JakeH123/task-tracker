@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Tracker & TCG Bank</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const ChevronLeft = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
+        const ChevronRight = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
+        const DollarSign = ({className}) => <svg className={className} width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
+        const TrendingUp = ({className}) => <svg className={className} width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
+        const Check = ({className}) => <svg className={className} width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+        const Settings = ({className}) => <svg className={className} width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/></svg>;
+
+        const TaskTrackerApp = () => {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(new Date());
+            const [tasks, setTasks] = useState(() => {
+                const saved = localStorage.getItem('tasks');
+                return saved ? JSON.parse(saved) : {};
+            });
+            const [taskNames, setTaskNames] = useState(() => {
+                const saved = localStorage.getItem('taskNames');
+                if (saved) return JSON.parse(saved);
+                return {
+                    default: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                    weekday: {
+                        0: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                        1: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                        2: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                        3: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                        4: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                        5: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                        6: ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5'],
+                    },
+                    specific: {}
+                };
+            });
+            const [tcgBank, setTcgBank] = useState(() => {
+                const saved = localStorage.getItem('tcgBank');
+                return saved ? parseFloat(saved) : 0;
+            });
+            const [transactions, setTransactions] = useState(() => {
+                const saved = localStorage.getItem('transactions');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [showSpendModal, setShowSpendModal] = useState(false);
+            const [spendAmount, setSpendAmount] = useState('');
+            const [spendDescription, setSpendDescription] = useState('');
+            const [activeTab, setActiveTab] = useState('calendar');
+            const [editMode, setEditMode] = useState('weekday');
+            const [selectedWeekday, setSelectedWeekday] = useState(0);
+            const [editDate, setEditDate] = useState(new Date());
+
+            const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+            // Auto-advance to today when day changes
+            useEffect(() => {
+                const checkDate = setInterval(() => {
+                    const now = new Date();
+                    const today = now.toDateString();
+                    const selected = selectedDate.toDateString();
+                    
+                    // If we're viewing yesterday and it's now a new day, advance to today
+                    if (selected === new Date(Date.now() - 86400000).toDateString()) {
+                        setSelectedDate(now);
+                        setCurrentDate(now);
+                    }
+                }, 60000); // Check every minute
+
+                return () => clearInterval(checkDate);
+            }, [selectedDate]);
+
+            // Save to localStorage
+            useEffect(() => {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }, [tasks]);
+
+            useEffect(() => {
+                localStorage.setItem('taskNames', JSON.stringify(taskNames));
+            }, [taskNames]);
+
+            useEffect(() => {
+                localStorage.setItem('tcgBank', tcgBank.toString());
+            }, [tcgBank]);
+
+            useEffect(() => {
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+            }, [transactions]);
+
+            const getTaskNamesForDate = (date) => {
+                const dateStr = date.toDateString();
+                const dayOfWeek = date.getDay();
+                
+                if (taskNames.specific[dateStr]) {
+                    return taskNames.specific[dateStr];
+                }
+                
+                return taskNames.weekday[dayOfWeek];
+            };
+
+            const initializeTasks = (dateStr) => {
+                if (!tasks[dateStr]) {
+                    setTasks(prev => ({
+                        ...prev,
+                        [dateStr]: [false, false, false, false, false]
+                    }));
+                }
+            };
+
+            const getDayColor = (dateStr) => {
+                const dayTasks = tasks[dateStr];
+                if (!dayTasks) return 'bg-white';
+                
+                const completed = dayTasks.filter(t => t).length;
+                if (completed === 5) return 'bg-green-500 text-white';
+                if (completed >= 3) return 'bg-yellow-400';
+                if (completed >= 1) return 'bg-red-400';
+                return 'bg-white';
+            };
+
+            const toggleTask = (index) => {
+                const dateStr = selectedDate.toDateString();
+                const currentTasks = tasks[dateStr] || [false, false, false, false, false];
+                const newTasks = [...currentTasks];
+                const wasCompleted = newTasks[index];
+                newTasks[index] = !newTasks[index];
+                
+                setTasks(prev => ({
+                    ...prev,
+                    [dateStr]: newTasks
+                }));
+
+                if (!wasCompleted) {
+                    const newBank = tcgBank + 7;
+                    setTcgBank(newBank);
+                    setTransactions(prev => [{
+                        date: new Date().toISOString(),
+                        type: 'earn',
+                        amount: 7,
+                        description: `${getTaskNamesForDate(selectedDate)[index]} completed`,
+                        balance: newBank
+                    }, ...prev]);
+                } else {
+                    const newBank = tcgBank - 7;
+                    setTcgBank(newBank);
+                    setTransactions(prev => [{
+                        date: new Date().toISOString(),
+                        type: 'refund',
+                        amount: -7,
+                        description: `${getTaskNamesForDate(selectedDate)[index]} unchecked`,
+                        balance: newBank
+                    }, ...prev]);
+                }
+            };
+
+            const updateWeekdayTaskName = (dayOfWeek, taskIndex, newName) => {
+                setTaskNames(prev => ({
+                    ...prev,
+                    weekday: {
+                        ...prev.weekday,
+                        [dayOfWeek]: prev.weekday[dayOfWeek].map((name, i) => 
+                            i === taskIndex ? newName : name
+                        )
+                    }
+                }));
+            };
+
+            const updateSpecificTaskName = (date, taskIndex, newName) => {
+                const dateStr = date.toDateString();
+                const dayOfWeek = date.getDay();
+                const currentNames = taskNames.specific[dateStr] || [...taskNames.weekday[dayOfWeek]];
+                
+                setTaskNames(prev => ({
+                    ...prev,
+                    specific: {
+                        ...prev.specific,
+                        [dateStr]: currentNames.map((name, i) => 
+                            i === taskIndex ? newName : name
+                        )
+                    }
+                }));
+            };
+
+            const removeSpecificOverride = (date) => {
+                const dateStr = date.toDateString();
+                setTaskNames(prev => {
+                    const newSpecific = { ...prev.specific };
+                    delete newSpecific[dateStr];
+                    return {
+                        ...prev,
+                        specific: newSpecific
+                    };
+                });
+            };
+
+            const handleSpend = () => {
+                const amount = parseFloat(spendAmount);
+                if (isNaN(amount) || amount <= 0) {
+                    alert('Please enter a valid amount');
+                    return;
+                }
+                if (amount > tcgBank) {
+                    alert('Insufficient funds in TCG Bank!');
+                    return;
+                }
+
+                const newBank = tcgBank - amount;
+                setTcgBank(newBank);
+                setTransactions(prev => [{
+                    date: new Date().toISOString(),
+                    type: 'spend',
+                    amount: -amount,
+                    description: spendDescription || 'Card purchase',
+                    balance: newBank
+                }, ...prev]);
+
+                setShowSpendModal(false);
+                setSpendAmount('');
+                setSpendDescription('');
+            };
+
+            const changeMonth = (delta) => {
+                setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
+            };
+
+            const changeYear = (delta) => {
+                setCurrentDate(new Date(currentDate.getFullYear() + delta, currentDate.getMonth(), 1));
+            };
+
+            const getDaysInMonth = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                const startingDayOfWeek = firstDay.getDay();
+
+                const days = [];
+                
+                for (let i = 0; i < startingDayOfWeek; i++) {
+                    days.push(null);
+                }
+                
+                for (let i = 1; i <= daysInMonth; i++) {
+                    days.push(new Date(year, month, i));
+                }
+                
+                return days;
+            };
+
+            const days = getDaysInMonth();
+            const selectedDateStr = selectedDate.toDateString();
+            const currentTasks = tasks[selectedDateStr] || [false, false, false, false, false];
+            const currentTaskNames = getTaskNamesForDate(selectedDate);
+
+            useEffect(() => {
+                initializeTasks(selectedDateStr);
+            }, [selectedDateStr]);
+
+            return (
+                <div className="min-h-screen bg-gray-50 p-4">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h1 className="text-3xl font-bold text-gray-800">Task Tracker & TCG Bank</h1>
+                                <div className="flex items-center gap-2 bg-green-100 px-4 py-2 rounded-lg">
+                                    <DollarSign className="text-green-600" />
+                                    <span className="text-2xl font-bold text-green-600">${tcgBank.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-2 border-b">
+                                <button
+                                    onClick={() => setActiveTab('calendar')}
+                                    className={`px-4 py-2 font-medium transition ${
+                                        activeTab === 'calendar'
+                                            ? 'border-b-2 border-blue-500 text-blue-600'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    <Check className="inline mr-2" />
+                                    Calendar
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('settings')}
+                                    className={`px-4 py-2 font-medium transition ${
+                                        activeTab === 'settings'
+                                            ? 'border-b-2 border-blue-500 text-blue-600'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    <Settings className="inline mr-2" />
+                                    Edit Tasks
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('transactions')}
+                                    className={`px-4 py-2 font-medium transition ${
+                                        activeTab === 'transactions'
+                                            ? 'border-b-2 border-blue-500 text-blue-600'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    <TrendingUp className="inline mr-2" />
+                                    Transactions
+                                </button>
+                            </div>
+                        </div>
+
+                        {activeTab === 'calendar' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => changeYear(-1)}
+                                                className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+                                            >
+                                                {'<<'}
+                                            </button>
+                                            <button
+                                                onClick={() => changeMonth(-1)}
+                                                className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+                                            >
+                                                <ChevronLeft />
+                                            </button>
+                                        </div>
+                                        
+                                        <h2 className="text-xl font-bold">
+                                            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                        </h2>
+                                        
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => changeMonth(1)}
+                                                className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+                                            >
+                                                <ChevronRight />
+                                            </button>
+                                            <button
+                                                onClick={() => changeYear(1)}
+                                                className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+                                            >
+                                                {'>>'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-7 gap-2">
+                                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                            <div key={day} className="text-center font-semibold text-gray-600 py-2">
+                                                {day}
+                                            </div>
+                                        ))}
+                                        
+                                        {days.map((day, index) => {
+                                            if (!day) {
+                                                return <div key={`empty-${index}`} className="aspect-square" />;
+                                            }
+                                            
+                                            const dateStr = day.toDateString();
+                                            const isSelected = dateStr === selectedDateStr;
+                                            const isToday = dateStr === new Date().toDateString();
+                                            const color = getDayColor(dateStr);
+                                            
+                                            return (
+                                                <button
+                                                    key={dateStr}
+                                                    onClick={() => setSelectedDate(day)}
+                                                    className={`aspect-square rounded-lg flex items-center justify-center font-medium transition ${color} ${
+                                                        isSelected ? 'ring-4 ring-blue-500' : ''
+                                                    } ${isToday ? 'ring-2 ring-purple-400' : ''} hover:opacity-80`}
+                                                >
+                                                    {day.getDate()}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="mt-4 flex gap-4 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 bg-green-500 rounded"></div>
+                                            <span>5 tasks</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 bg-yellow-400 rounded"></div>
+                                            <span>3-4 tasks</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 bg-red-400 rounded"></div>
+                                            <span>1-2 tasks</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-lg shadow-md p-6">
+                                    <h3 className="text-xl font-bold mb-4">
+                                        {selectedDate.toLocaleDateString('default', { 
+                                            month: 'short', 
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        })}
+                                    </h3>
+
+                                    <div className="space-y-3 mb-6">
+                                        {currentTasks.map((completed, index) => (
+                                            <label
+                                                key={index}
+                                                className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={completed}
+                                                    onChange={() => toggleTask(index)}
+                                                    className="w-5 h-5 rounded"
+                                                />
+                                                <span className={completed ? 'line-through text-gray-500' : ''}>
+                                                    {currentTaskNames[index]} {completed && '(+$7)'}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+
+                                    <div className="border-t pt-4">
+                                        <div className="text-sm text-gray-600 mb-2">
+                                            Completed: {currentTasks.filter(t => t).length}/5
+                                        </div>
+                                        <div className="text-sm font-medium text-green-600">
+                                            Earned today: ${(currentTasks.filter(t => t).length * 7).toFixed(2)}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setShowSpendModal(true)}
+                                        className="w-full mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
+                                    >
+                                        Spend from TCG Bank
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <div className="bg-white rounded-lg shadow-md p-6">
+                                <h2 className="text-2xl font-bold mb-4">Edit Task Names</h2>
+                                
+                                <div className="flex gap-2 mb-6 border-b pb-2">
+                                    <button
+                                        onClick={() => setEditMode('weekday')}
+                                        className={`px-4 py-2 rounded-t transition ${
+                                            editMode === 'weekday'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-gray-100 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Edit by Weekday
+                                    </button>
+                                    <button
+                                        onClick={() => setEditMode('specific')}
+                                        className={`px-4 py-2 rounded-t transition ${
+                                            editMode === 'specific'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-gray-100 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Edit Specific Day
+                                    </button>
+                                </div>
+
+                                {editMode === 'weekday' && (
+                                    <div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-2">Select Weekday:</label>
+                                            <select
+                                                value={selectedWeekday}
+                                                onChange={(e) => setSelectedWeekday(parseInt(e.target.value))}
+                                                className="w-full border rounded-lg px-3 py-2"
+                                            >
+                                                {weekdayNames.map((name, index) => (
+                                                    <option key={index} value={index}>{name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <p className="text-sm text-gray-600 mb-2">
+                                                These task names will apply to all {weekdayNames[selectedWeekday]}s
+                                            </p>
+                                            {taskNames.weekday[selectedWeekday].map((name, index) => (
+                                                <div key={index}>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Task {index + 1}:
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={name}
+                                                        onChange={(e) => updateWeekdayTaskName(selectedWeekday, index, e.target.value)}
+                                                        className="w-full border rounded-lg px-3 py-2"
+                                                        placeholder={`Task ${index + 1}`}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {editMode === 'specific' && (
+                                    <div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-2">Select Date:</label>
+                                            <input
+                                                type="date"
+                                                value={editDate.toISOString().split('T')[0]}
+                                                onChange={(e) => setEditDate(new Date(e.target.value + 'T00:00:00'))}
+                                                className="w-full border rounded-lg px-3 py-2"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <p className="text-sm text-gray-600 mb-2">
+                                                Custom tasks for {editDate.toLocaleDateString('default', { 
+                                                    weekday: 'long',
+                                                    month: 'long', 
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })}
+                                            </p>
+                                            
+                                            {taskNames.specific[editDate.toDateString()] && (
+                                                <button
+                                                    onClick={() => removeSpecificOverride(editDate)}
+                                                    className="w-full mb-3 bg-red-100 text-red-600 py-2 px-4 rounded-lg hover:bg-red-200 transition text-sm"
+                                                >
+                                                    Reset to {weekdayNames[editDate.getDay()]} Default
+                                                </button>
+                                            )}
+
+                                            {getTaskNamesForDate(editDate).map((name, index) => (
+                                                <div key={index}>
+                                                    <label className="block text-sm font-medium mb-1">
+                                                        Task {index + 1}:
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={name}
+                                                        onChange={(e) => updateSpecificTaskName(editDate, index, e.target.value)}
+                                                        className="w-full border rounded-lg px-3 py-2"
+                                                        placeholder={`Task ${index + 1}`}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'transactions' && (
+                            <div className="bg-white rounded-lg shadow-md p-6">
+                                <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+                                
+                                {transactions.length === 0 ? (
+                                    <p className="text-gray-500 text-center py-8">No transactions yet</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {transactions.map((txn, index) => (
+                                            <div
+                                                key={index}
+                                                className={`p-4 rounded-lg border-l-4 ${
+                                                    txn.type === 'earn'
+                                                        ? 'border-green-500 bg-green-50'
+                                                        : txn.type === 'spend'
+                                                        ? 'border-red-500 bg-red-50'
+                                                        : 'border-gray-500 bg-gray-50'
+                                                }`}
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <div className="font-medium">{txn.description}</div>
+                                                        <div className="text-sm text-gray-500">
+                                                            {new Date(txn.date).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className={`font-bold ${
+                                                            txn.amount > 0 ? 'text-green-600' : 'text-red-600'
+                                                        }`}>
+                                                            {txn.amount > 0 ? '+' : ''}${Math.abs(txn.amount).toFixed(2)}
+                                                        </div>
+                                                        <div className="text-sm text-gray-500">
+                                                            Balance: ${txn.balance.toFixed(2)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {showSpendModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                                    <h3 className="text-xl font-bold mb-4">Spend from TCG Bank</h3>
+                                    
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-2">Amount ($)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={spendAmount}
+                                            onChange={(e) => setSpendAmount(e.target.value)}
+                                            className="w-full border rounded-lg px-3 py-2"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-2">What did you buy?</label>
+                                        <input
+                                            type="text"
+                                            value={spendDescription}
+                                            onChange={(e) => setSpendDescription(e.target.value)}
+                                            className="w-full border rounded-lg px-3 py-2"
+                                            placeholder="e.g., Signature Ahri card"
+                                        />
+                                    </div>
+
+                                    <div className="text-sm text-gray-600 mb-4">
+                                        Available: ${tcgBank.toFixed(2)}
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setShowSpendModal(false)}
+                                            className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300"
+                                        >
+                                            Cancel
+                                        </button
