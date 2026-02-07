@@ -1,234 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Tracker</title>
-    <link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Tracker & TCG Bank</title>
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#3B82F6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Task Tracker">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        
-        // Icons
-        const ChevronLeft = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>;
-        const ChevronRight = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>;
-        const DollarSign = ({className}) => <svg className={className} width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
-        const TrendingUp = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>;
-        const Check = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
-        const Settings = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/></svg>;
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect}=React;
+const ChevronLeft=()=><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>;
+const ChevronRight=()=><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>;
+const DollarSign=({className})=><svg className={className} width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
+const TrendingUp=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
+const Check=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
+const Settings=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/></svg>;
 
-        function App() {
-            const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            
-            const [currentDate, setCurrentDate] = useState(new Date());
-            const [selectedDate, setSelectedDate] = useState(new Date());
-            const [tasks, setTasks] = useState(() => JSON.parse(localStorage.getItem('tasks') || '{}'));
-            const [taskNames, setTaskNames] = useState(() => {
-                const saved = localStorage.getItem('taskNames');
-                if (saved) return JSON.parse(saved);
-                return {
-                    weekday: {0:['Task 1','Task 2','Task 3','Task 4','Task 5'],1:['Task 1','Task 2','Task 3','Task 4','Task 5'],2:['Task 1','Task 2','Task 3','Task 4','Task 5'],3:['Task 1','Task 2','Task 3','Task 4','Task 5'],4:['Task 1','Task 2','Task 3','Task 4','Task 5'],5:['Task 1','Task 2','Task 3','Task 4','Task 5'],6:['Task 1','Task 2','Task 3','Task 4','Task 5']},
-                    specific: {}
-                };
-            });
-            const [bank, setBank] = useState(() => parseFloat(localStorage.getItem('bank') || '0'));
-            const [transactions, setTransactions] = useState(() => JSON.parse(localStorage.getItem('transactions') || '[]'));
-            const [showSpend, setShowSpend] = useState(false);
-            const [spendAmt, setSpendAmt] = useState('');
-            const [spendDesc, setSpendDesc] = useState('');
-            const [tab, setTab] = useState('calendar');
-            const [editMode, setEditMode] = useState('weekday');
-            const [selWeekday, setSelWeekday] = useState(0);
-            const [editDate, setEditDate] = useState(new Date());
+function App(){
+const wdn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const [cd,setCd]=useState(new Date());
+const [sd,setSd]=useState(new Date());
+const [tasks,setTasks]=useState(()=>{try{return JSON.parse(localStorage.getItem('tasks')||'{}')}catch{return{}}});
+const [tn,setTn]=useState(()=>{try{const s=localStorage.getItem('tn');if(s)return JSON.parse(s)}catch{}return{weekday:{0:['Task 1','Task 2','Task 3','Task 4','Task 5'],1:['Task 1','Task 2','Task 3','Task 4','Task 5'],2:['Task 1','Task 2','Task 3','Task 4','Task 5'],3:['Task 1','Task 2','Task 3','Task 4','Task 5'],4:['Task 1','Task 2','Task 3','Task 4','Task 5'],5:['Task 1','Task 2','Task 3','Task 4','Task 5'],6:['Task 1','Task 2','Task 3','Task 4','Task 5']},specific:{}}});
+const [bank,setBank]=useState(()=>{try{return parseFloat(localStorage.getItem('bank')||'0')}catch{return 0}});
+const [txns,setTxns]=useState(()=>{try{return JSON.parse(localStorage.getItem('txns')||'[]')}catch{return[]}});
+const [tv,setTv]=useState(()=>{try{return parseFloat(localStorage.getItem('tv')||'7')}catch{return 7}});
+const [showS,setShowS]=useState(false);
+const [sa,setSa]=useState('');
+const [sDesc,setSDesc]=useState('');
+const [tab,setTab]=useState('calendar');
+const [em,setEm]=useState('weekday');
+const [sw,setSw]=useState(0);
+const [ed,setEd]=useState(new Date());
 
-            useEffect(() => localStorage.setItem('tasks', JSON.stringify(tasks)), [tasks]);
-            useEffect(() => localStorage.setItem('taskNames', JSON.stringify(taskNames)), [taskNames]);
-            useEffect(() => localStorage.setItem('bank', bank), [bank]);
-            useEffect(() => localStorage.setItem('transactions', JSON.stringify(transactions)), [transactions]);
+useEffect(()=>{const i=setInterval(()=>{const n=new Date();const s=sd.toDateString();const y=new Date(Date.now()-86400000).toDateString();if(s===y){setSd(n);setCd(n)}},60000);return()=>clearInterval(i)},[sd]);
+useEffect(()=>{try{localStorage.setItem('tasks',JSON.stringify(tasks))}catch{}},[tasks]);
+useEffect(()=>{try{localStorage.setItem('tn',JSON.stringify(tn))}catch{}},[tn]);
+useEffect(()=>{try{localStorage.setItem('bank',bank.toString())}catch{}},[bank]);
+useEffect(()=>{try{localStorage.setItem('txns',JSON.stringify(txns))}catch{}},[txns]);
+useEffect(()=>{try{localStorage.setItem('tv',tv.toString())}catch{}},[tv]);
 
-            const getNames = (d) => taskNames.specific[d.toDateString()] || taskNames.weekday[d.getDay()];
-            const getColor = (ds) => {
-                const t = tasks[ds];
-                if (!t) return 'bg-white';
-                const c = t.filter(x=>x).length;
-                if (c===5) return 'bg-green-500 text-white';
-                if (c>=3) return 'bg-yellow-400';
-                if (c>=1) return 'bg-red-400';
-                return 'bg-white';
-            };
+const getN=(d)=>tn.specific[d.toDateString()]||tn.weekday[d.getDay()];
+const getC=(ds)=>{const t=tasks[ds];if(!t)return'bg-white';const c=t.filter(x=>x).length;if(c===5)return'bg-green-500 text-white';if(c>=3)return'bg-yellow-400';if(c>=1)return'bg-red-400';return'bg-white'};
+const toggle=(i)=>{const ds=sd.toDateString();const ct=tasks[ds]||[false,false,false,false,false];const nt=[...ct];const was=nt[i];nt[i]=!nt[i];setTasks(p=>({...p,[ds]:nt}));if(!was){const nb=bank+tv;setBank(nb);setTxns(p=>[{date:new Date().toISOString(),type:'earn',amount:tv,description:`${getN(sd)[i]} completed`,balance:nb},...p])}else{const nb=bank-tv;setBank(nb);setTxns(p=>[{date:new Date().toISOString(),type:'refund',amount:-tv,description:`${getN(sd)[i]} unchecked`,balance:nb},...p])}};
+const spend=()=>{const a=parseFloat(sa);if(isNaN(a)||a<=0)return alert('Invalid amount');if(a>bank)return alert('Insufficient funds');const nb=bank-a;setBank(nb);setTxns(p=>[{date:new Date().toISOString(),type:'spend',amount:-a,description:sDesc||'Purchase',balance:nb},...p]);setShowS(false);setSa('');setSDesc('')};
+const getDays=()=>{const y=cd.getFullYear();const m=cd.getMonth();const f=new Date(y,m,1).getDay();const l=new Date(y,m+1,0).getDate();const d=[];for(let i=0;i<f;i++)d.push(null);for(let i=1;i<=l;i++)d.push(new Date(y,m,i));return d};
 
-            const toggle = (i) => {
-                const ds = selectedDate.toDateString();
-                const curr = tasks[ds] || [false,false,false,false,false];
-                const next = [...curr];
-                next[i] = !next[i];
-                setTasks(p => ({...p, [ds]: next}));
-                const amt = next[i] ? 7 : -7;
-                const newB = bank + amt;
-                setBank(newB);
-                setTransactions(p => [{date: new Date().toISOString(), type: next[i]?'earn':'refund', amount: amt, description: `${getNames(selectedDate)[i]} ${next[i]?'completed':'unchecked'}`, balance: newB}, ...p]);
-            };
+const days=getDays();
+const ds=sd.toDateString();
+const ct=tasks[ds]||[false,false,false,false,false];
+const cn=getN(sd);
 
-            const spend = () => {
-                const a = parseFloat(spendAmt);
-                if (isNaN(a) || a<=0) return alert('Invalid amount');
-                if (a > bank) return alert('Insufficient funds');
-                const newB = bank - a;
-                setBank(newB);
-                setTransactions(p => [{date: new Date().toISOString(), type: 'spend', amount: -a, description: spendDesc || 'Purchase', balance: newB}, ...p]);
-                setShowSpend(false);
-                setSpendAmt('');
-                setSpendDesc('');
-            };
+return(
+<div className="min-h-screen bg-gray-50 p-4">
+<div className="max-w-6xl mx-auto">
+<div className="bg-white rounded-lg shadow p-6 mb-6">
+<div className="flex justify-between items-center mb-4">
+<h1 className="text-3xl font-bold">Task Tracker</h1>
+<div className="flex items-center gap-2 bg-green-100 px-4 py-2 rounded"><DollarSign className="text-green-600"/><span className="text-2xl font-bold text-green-600">${bank.toFixed(2)}</span></div>
+</div>
+<div className="flex gap-2 border-b">
+<button onClick={()=>setTab('calendar')} className={`px-4 py-2 ${tab==='calendar'?'border-b-2 border-blue-500 text-blue-600':'text-gray-500'}`}><Check/> Calendar</button>
+<button onClick={()=>setTab('settings')} className={`px-4 py-2 ${tab==='settings'?'border-b-2 border-blue-500 text-blue-600':'text-gray-500'}`}><Settings/> Settings</button>
+<button onClick={()=>setTab('transactions')} className={`px-4 py-2 ${tab==='transactions'?'border-b-2 border-blue-500 text-blue-600':'text-gray-500'}`}><TrendingUp/> History</button>
+</div>
+</div>
 
-            const getDays = () => {
-                const y = currentDate.getFullYear();
-                const m = currentDate.getMonth();
-                const first = new Date(y, m, 1).getDay();
-                const last = new Date(y, m+1, 0).getDate();
-                const days = [];
-                for(let i=0; i<first; i++) days.push(null);
-                for(let i=1; i<=last; i++) days.push(new Date(y, m, i));
-                return days;
-            };
+{tab==='calendar'&&(
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
+<div className="flex justify-between items-center mb-4">
+<div className="flex gap-2">
+<button onClick={()=>setCd(new Date(cd.getFullYear()-1,cd.getMonth(),1))} className="px-3 py-1 bg-gray-100 rounded">{'<<'}</button>
+<button onClick={()=>setCd(new Date(cd.getFullYear(),cd.getMonth()-1,1))} className="px-3 py-1 bg-gray-100 rounded"><ChevronLeft/></button>
+</div>
+<h2 className="text-xl font-bold">{cd.toLocaleString('default',{month:'long',year:'numeric'})}</h2>
+<div className="flex gap-2">
+<button onClick={()=>setCd(new Date(cd.getFullYear(),cd.getMonth()+1,1))} className="px-3 py-1 bg-gray-100 rounded"><ChevronRight/></button>
+<button onClick={()=>setCd(new Date(cd.getFullYear()+1,cd.getMonth(),1))} className="px-3 py-1 bg-gray-100 rounded">{'>>'}</button>
+</div>
+</div>
+<div className="grid grid-cols-7 gap-2">
+{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><div key={d} className="text-center font-semibold py-2 text-sm">{d}</div>)}
+{days.map((d,i)=>{if(!d)return<div key={`e${i}`} className="aspect-square"/>;const dstr=d.toDateString();const isSel=dstr===ds;const isToday=dstr===new Date().toDateString();return<button key={dstr} onClick={()=>setSd(d)} className={`aspect-square rounded-lg flex items-center justify-center font-medium text-sm ${getC(dstr)} ${isSel?'ring-4 ring-blue-500':''} ${isToday?'ring-2 ring-purple-400':''}`}>{d.getDate()}</button>})}
+</div>
+<div className="mt-4 flex gap-4 text-xs">
+<div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded"/><span>5 tasks</span></div>
+<div className="flex items-center gap-2"><div className="w-4 h-4 bg-yellow-400 rounded"/><span>3-4</span></div>
+<div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-400 rounded"/><span>1-2</span></div>
+</div>
+</div>
+<div className="bg-white rounded-lg shadow p-6">
+<h3 className="text-xl font-bold mb-4">{sd.toLocaleDateString()}</h3>
+<div className="space-y-3 mb-6">
+{ct.map((c,i)=><label key={i} className="flex items-center gap-3 p-3 rounded bg-gray-50 hover:bg-gray-100 cursor-pointer"><input type="checkbox" checked={c} onChange={()=>toggle(i)} className="w-5 h-5"/><span className={c?'line-through text-gray-500':''}>{cn[i]} {c&&`(+$${tv})`}</span></label>)}
+</div>
+<div className="border-t pt-4">
+<div className="text-sm text-gray-600">Completed: {ct.filter(t=>t).length}/5</div>
+<div className="text-sm font-medium text-green-600">Earned: ${(ct.filter(t=>t).length*tv).toFixed(2)}</div>
+</div>
+<button onClick={()=>setShowS(true)} className="w-full mt-4 bg-blue-500 text-white py-2 rounded">Spend</button>
+</div>
+</div>
+)}
 
-            const days = getDays();
-            const ds = selectedDate.toDateString();
-            const curr = tasks[ds] || [false,false,false,false,false];
-            const names = getNames(selectedDate);
+{tab==='settings'&&(
+<div className="bg-white rounded-lg shadow p-6">
+<h2 className="text-2xl font-bold mb-6">Settings</h2>
+<div className="mb-8 p-4 bg-blue-50 rounded border border-blue-200">
+<h3 className="text-lg font-semibold mb-3">Task Value</h3>
+<div className="flex items-center gap-4">
+<label className="text-sm font-medium">Amount per task:</label>
+<div className="flex items-center gap-2">
+<span className="text-lg">$</span>
+<input type="number" min="0.01" step="0.01" value={tv} onChange={(e)=>setTv(parseFloat(e.target.value)||0)} className="w-24 border rounded px-3 py-2 text-lg font-medium"/>
+</div>
+</div>
+<p className="text-sm text-gray-600 mt-2">Each completed task adds ${tv.toFixed(2)} to your TCG Bank</p>
+</div>
+<h3 className="text-xl font-bold mb-4">Edit Task Names</h3>
+<div className="flex gap-2 mb-6">
+<button onClick={()=>setEm('weekday')} className={`px-4 py-2 rounded ${em==='weekday'?'bg-blue-500 text-white':'bg-gray-100'}`}>By Weekday</button>
+<button onClick={()=>setEm('specific')} className={`px-4 py-2 rounded ${em==='specific'?'bg-blue-500 text-white':'bg-gray-100'}`}>Specific Day</button>
+</div>
+{em==='weekday'&&(
+<div>
+<select value={sw} onChange={(e)=>setSw(parseInt(e.target.value))} className="w-full border rounded px-3 py-2 mb-4">
+{wdn.map((n,i)=><option key={i} value={i}>{n}</option>)}
+</select>
+<div className="space-y-3">
+{tn.weekday[sw].map((n,i)=><div key={i}><label className="block text-sm font-medium mb-1">Task {i+1}:</label><input type="text" value={n} onChange={(e)=>setTn(p=>({...p,weekday:{...p.weekday,[sw]:p.weekday[sw].map((x,j)=>j===i?e.target.value:x)}}))} className="w-full border rounded px-3 py-2"/></div>)}
+</div>
+</div>
+)}
+{em==='specific'&&(
+<div>
+<input type="date" value={ed.toISOString().split('T')[0]} onChange={(e)=>setEd(new Date(e.target.value+'T00:00:00'))} className="w-full border rounded px-3 py-2 mb-4"/>
+{tn.specific[ed.toDateString()]&&<button onClick={()=>setTn(p=>{const ns={...p.specific};delete ns[ed.toDateString()];return{...p,specific:ns}})} className="w-full mb-3 bg-red-100 text-red-600 py-2 rounded text-sm">Reset to {wdn[ed.getDay()]} Default</button>}
+<div className="space-y-3">
+{getN(ed).map((n,i)=><div key={i}><label className="block text-sm font-medium mb-1">Task {i+1}:</label><input type="text" value={n} onChange={(e)=>{const dstr=ed.toDateString();const dw=ed.getDay();const curn=tn.specific[dstr]||[...tn.weekday[dw]];setTn(p=>({...p,specific:{...p.specific,[dstr]:curn.map((x,j)=>j===i?e.target.value:x)}}))}} className="w-full border rounded px-3 py-2"/></div>)}
+</div>
+</div>
+)}
+</div>
+)}
 
-            return (
-                <div className="min-h-screen bg-gray-50 p-4">
-                    <div className="max-w-6xl mx-auto">
-                        <div className="bg-white rounded-lg shadow p-6 mb-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h1 className="text-3xl font-bold">Task Tracker</h1>
-                                <div className="flex items-center gap-2 bg-green-100 px-4 py-2 rounded">
-                                    <DollarSign className="text-green-600"/>
-                                    <span className="text-2xl font-bold text-green-600">${bank.toFixed(2)}</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-2 border-b">
-                                <button onClick={()=>setTab('calendar')} className={`px-4 py-2 ${tab==='calendar'?'border-b-2 border-blue-500 text-blue-600':'text-gray-500'}`}><Check/> Calendar</button>
-                                <button onClick={()=>setTab('settings')} className={`px-4 py-2 ${tab==='settings'?'border-b-2 border-blue-500 text-blue-600':'text-gray-500'}`}><Settings/> Edit</button>
-                                <button onClick={()=>setTab('transactions')} className={`px-4 py-2 ${tab==='transactions'?'border-b-2 border-blue-500 text-blue-600':'text-gray-500'}`}><TrendingUp/> History</button>
-                            </div>
-                        </div>
+{tab==='transactions'&&(
+<div className="bg-white rounded-lg shadow p-6">
+<h2 className="text-2xl font-bold mb-4">History</h2>
+{txns.length===0?<p className="text-gray-500 text-center py-8">No transactions</p>:(
+<div className="space-y-2">
+{txns.map((t,i)=><div key={i} className={`p-4 rounded border-l-4 ${t.type==='earn'?'border-green-500 bg-green-50':t.type==='spend'?'border-red-500 bg-red-50':'border-gray-500 bg-gray-50'}`}><div className="flex justify-between"><div><div className="font-medium">{t.description}</div><div className="text-sm text-gray-500">{new Date(t.date).toLocaleString()}</div></div><div className="text-right"><div className={`font-bold ${t.amount>0?'text-green-600':'text-red-600'}`}>{t.amount>0?'+':''}${Math.abs(t.amount).toFixed(2)}</div><div className="text-sm text-gray-500">Balance: ${t.balance.toFixed(2)}</div></div></div></div>)}
+</div>
+)}
+</div>
+)}
 
-                        {tab==='calendar' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <div className="flex gap-2">
-                                            <button onClick={()=>setCurrentDate(new Date(currentDate.getFullYear()-1,currentDate.getMonth(),1))} className="px-3 py-1 bg-gray-100 rounded">{'<<'}</button>
-                                            <button onClick={()=>setCurrentDate(new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1))} className="px-3 py-1 bg-gray-100 rounded"><ChevronLeft/></button>
-                                        </div>
-                                        <h2 className="text-xl font-bold">{currentDate.toLocaleString('default',{month:'long',year:'numeric'})}</h2>
-                                        <div className="flex gap-2">
-                                            <button onClick={()=>setCurrentDate(new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1))} className="px-3 py-1 bg-gray-100 rounded"><ChevronRight/></button>
-                                            <button onClick={()=>setCurrentDate(new Date(currentDate.getFullYear()+1,currentDate.getMonth(),1))} className="px-3 py-1 bg-gray-100 rounded">{'>>'}</button>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-7 gap-2">
-                                        {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><div key={d} className="text-center font-semibold py-2">{d}</div>)}
-                                        {days.map((d,i)=>{
-                                            if(!d) return <div key={`e${i}`} className="aspect-square"/>;
-                                            const dstr = d.toDateString();
-                                            const isSel = dstr===ds;
-                                            const isToday = dstr===new Date().toDateString();
-                                            return <button key={dstr} onClick={()=>setSelectedDate(d)} className={`aspect-square rounded-lg flex items-center justify-center font-medium ${getColor(dstr)} ${isSel?'ring-4 ring-blue-500':''} ${isToday?'ring-2 ring-purple-400':''}`}>{d.getDate()}</button>;
-                                        })}
-                                    </div>
-                                    <div className="mt-4 flex gap-4 text-sm">
-                                        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded"/><span>5 tasks</span></div>
-                                        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-yellow-400 rounded"/><span>3-4 tasks</span></div>
-                                        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-400 rounded"/><span>1-2 tasks</span></div>
-                                    </div>
-                                </div>
-                                <div className="bg-white rounded-lg shadow p-6">
-                                    <h3 className="text-xl font-bold mb-4">{selectedDate.toLocaleDateString()}</h3>
-                                    <div className="space-y-3 mb-6">
-                                        {curr.map((c,i)=><label key={i} className="flex items-center gap-3 p-3 rounded bg-gray-50 hover:bg-gray-100 cursor-pointer"><input type="checkbox" checked={c} onChange={()=>toggle(i)} className="w-5 h-5"/><span className={c?'line-through text-gray-500':''}>{names[i]} {c&&'(+$7)'}</span></label>)}
-                                    </div>
-                                    <div className="border-t pt-4">
-                                        <div className="text-sm text-gray-600">Completed: {curr.filter(t=>t).length}/5</div>
-                                        <div className="text-sm font-medium text-green-600">Earned: ${(curr.filter(t=>t).length*7).toFixed(2)}</div>
-                                    </div>
-                                    <button onClick={()=>setShowSpend(true)} className="w-full mt-4 bg-blue-500 text-white py-2 px-4 rounded">Spend</button>
-                                </div>
-                            </div>
-                        )}
-
-                        {tab==='settings' && (
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h2 className="text-2xl font-bold mb-4">Edit Task Names</h2>
-                                <div className="flex gap-2 mb-6">
-                                    <button onClick={()=>setEditMode('weekday')} className={`px-4 py-2 rounded ${editMode==='weekday'?'bg-blue-500 text-white':'bg-gray-100'}`}>By Weekday</button>
-                                    <button onClick={()=>setEditMode('specific')} className={`px-4 py-2 rounded ${editMode==='specific'?'bg-blue-500 text-white':'bg-gray-100'}`}>Specific Day</button>
-                                </div>
-                                {editMode==='weekday' && (
-                                    <div>
-                                        <select value={selWeekday} onChange={(e)=>setSelWeekday(parseInt(e.target.value))} className="w-full border rounded px-3 py-2 mb-4">
-                                            {weekdays.map((n,i)=><option key={i} value={i}>{n}</option>)}
-                                        </select>
-                                        <div className="space-y-3">
-                                            {taskNames.weekday[selWeekday].map((n,i)=><div key={i}><label className="block text-sm font-medium mb-1">Task {i+1}:</label><input type="text" value={n} onChange={(e)=>setTaskNames(p=>({...p,weekday:{...p.weekday,[selWeekday]:p.weekday[selWeekday].map((x,j)=>j===i?e.target.value:x)}}))} className="w-full border rounded px-3 py-2"/></div>)}
-                                        </div>
-                                    </div>
-                                )}
-                                {editMode==='specific' && (
-                                    <div>
-                                        <input type="date" value={editDate.toISOString().split('T')[0]} onChange={(e)=>setEditDate(new Date(e.target.value+'T00:00:00'))} className="w-full border rounded px-3 py-2 mb-4"/>
-                                        {taskNames.specific[editDate.toDateString()] && <button onClick={()=>setTaskNames(p=>{const ns={...p.specific}; delete ns[editDate.toDateString()]; return {...p,specific:ns};})} className="w-full mb-3 bg-red-100 text-red-600 py-2 rounded text-sm">Reset to {weekdays[editDate.getDay()]} Default</button>}
-                                        <div className="space-y-3">
-                                            {getNames(editDate).map((n,i)=><div key={i}><label className="block text-sm font-medium mb-1">Task {i+1}:</label><input type="text" value={n} onChange={(e)=>{const ds=editDate.toDateString(); const dw=editDate.getDay(); const cn=taskNames.specific[ds]||[...taskNames.weekday[dw]]; setTaskNames(p=>({...p,specific:{...p.specific,[ds]:cn.map((x,j)=>j===i?e.target.value:x)}}));}} className="w-full border rounded px-3 py-2"/></div>)}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {tab==='transactions' && (
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h2 className="text-2xl font-bold mb-4">History</h2>
-                                {transactions.length===0 ? <p className="text-gray-500 text-center py-8">No transactions</p> : (
-                                    <div className="space-y-2">
-                                        {transactions.map((t,i)=><div key={i} className={`p-4 rounded border-l-4 ${t.type==='earn'?'border-green-500 bg-green-50':t.type==='spend'?'border-red-500 bg-red-50':'border-gray-500 bg-gray-50'}`}><div className="flex justify-between"><div><div className="font-medium">{t.description}</div><div className="text-sm text-gray-500">{new Date(t.date).toLocaleString()}</div></div><div className="text-right"><div className={`font-bold ${t.amount>0?'text-green-600':'text-red-600'}`}>{t.amount>0?'+':''}${Math.abs(t.amount).toFixed(2)}</div><div className="text-sm text-gray-500">Balance: ${t.balance.toFixed(2)}</div></div></div></div>)}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {showSpend && (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                                <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                                    <h3 className="text-xl font-bold mb-4">Spend from TCG Bank</h3>
-                                    <div className="mb-4"><label className="block text-sm font-medium mb-2">Amount ($)</label><input type="number" step="0.01" value={spendAmt} onChange={(e)=>setSpendAmt(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="0.00"/></div>
-                                    <div className="mb-4"><label className="block text-sm font-medium mb-2">What did you buy?</label><input type="text" value={spendDesc} onChange={(e)=>setSpendDesc(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="Card name"/></div>
-                                    <div className="text-sm text-gray-600 mb-4">Available: ${bank.toFixed(2)}</div>
-                                    <div className="flex gap-2">
-                                        <button onClick={()=>setShowSpend(false)} className="flex-1 bg-gray-200 py-2 rounded">Cancel</button>
-                                        <button onClick={spend} className="flex-1 bg-red-500 text-white py-2 rounded">Confirm</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        ReactDOM.render(<App/>, document.getElementById('root'));
-    </script>
+{showS&&(
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+<div className="bg-white rounded p-6 max-w-md w-full">
+<h3 className="text-xl font-bold mb-4">Spend from TCG Bank</h3>
+<div className="mb-4"><label className="block text-sm font-medium mb-2">Amount ($)</label><input type="number" step="0.01" value={sa} onChange={(e)=>setSa(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="0.00"/></div>
+<div className="mb-4"><label className="block text-sm font-medium mb-2">What did you buy?</label><input type="text" value={sDesc} onChange={(e)=>setSDesc(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="Card name"/></div>
+<div className="text-sm text-gray-600 mb-4">Available: ${bank.toFixed(2)}</div>
+<div className="flex gap-2">
+<button onClick={()=>setShowS(false)} className="flex-1 bg-gray-200 py-2 rounded">Cancel</button>
+<button onClick={spend} className="flex-1 bg-red-500 text-white py-2 rounded">Confirm</button>
+</div>
+</div>
+</div>
+)}
+</div>
+</div>
+);
+}
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
 </body>
 </html>
